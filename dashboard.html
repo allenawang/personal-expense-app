@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block title %}Overview — {{ app_name }}{% endblock %}
+
+{% block content %}
+
+{# ── The headline: one number and whether it's a problem ───────────────── #}
+<section class="headline status--{{ summary.overall_status }}">
+  <div class="headline__figure">
+    <span class="eyebrow">Spent in {{ window.label }}</span>
+    <p class="bignum">{{ summary.total_spent | money }}</p>
+    {% if summary.overall_limit %}
+      <p class="headline__against">
+        of {{ summary.overall_limit | money }} budgeted
+        <span class="chip chip--{{ summary.overall_status }}">
+          {% if summary.overall_status == 'over' %}over budget
+          {% elif summary.overall_status == 'at_risk' %}ahead of pace
+          {% else %}on track{% endif %}
+        </span>
+      </p>
+    {% else %}
+      <p class="headline__against">No monthly budget set yet —
+        <a href="/budgets?month={{ window.slug }}">set one</a> to unlock pacing.</p>
+    {% endif %}
+  </div>
+
+  {% if summary.overall_limit %}
+  <dl class="headline__stats">
+    <div>
+      <dt>Left to spend</dt>
+      <dd class="figure">{{ summary.overall_remaining | money }}</dd>
+    </div>
+    <div>
+      <dt>Projected month end</dt>
+      <dd class="figure">{{ summary.overall_projected | money }}</dd>
+    </div>
+    {% if summary.daily_allowance is not none %}
+    <div>
+      <dt>Safe daily spend</dt>
+      <dd class="figure">{{ summary.daily_allowance | money }}<small>× {{ window.days_remaining }}d</small></dd>
+    </div>
+    {% endif %}
+  </dl>
+  {% endif %}
+</section>
+
+<div class="split">
+
+  {# ── Signature: the pace wall ───────────────────────────────────────── #}
+  <section class="panel panel--wide">
+    <header class="panel__head">
+      <h2>Where the month stands</h2>
+      <p class="panel__note">
+        The bar is what you've spent. The notch is an even pace for today.
+        Hatching shows where the month lands if nothing changes.
+      </p>
+    </header>
+
+    {% if summary.lines %}
+      <ul class="pacewall">
+        {% for line in summary.lines %}
+        <li class="pacerow status--{{ line.status }}">
+          <div class="pacerow__top">
+            <span class="pacerow__name">
+              <span class="swatch" style="background: {{ line.color }}"></span>
+              {% if line.icon %}<span class="pacerow__icon">{{ line.icon }}</span>{% endif %}
+              {{ line.name }}
+            </span>
+            <span class="pacerow__amount figure">
+              {{ line.spent | money }}{% if line.is_tracked %}<span class="muted"> / {{ line.limit | money_short }}</span>{% endif %}
+            </span>
+          </div>
+
+          {% if line.is_tracked %}
+          <div class="pacebar"
+               style="--fill: {{ line.fill_pct | clamp }}%;
+                      --pace: {{ line.pace_pct | clamp }}%;
+                      --projected: {{ line.projected_pct | clamp }}%;
+                      --hue: {{ line.color }};">
+            <div class="pacebar__projected" aria-hidden="true"></div>
+            <div class="pacebar__fill"></div>
+            <div class="pacebar__tick" aria-hidden="true"></div>
+          </div>
+          <p class="pacerow__read">
+            {% if line.status == 'over' %}
+              {{ (line.spent - line.limit) | money }} over the limit
+            {% elif line.status == 'at_risk' %}
+              {{ (line.spent - line.pace_amount) | money }} ahead of pace · projected {{ line.projected | money_short }}
+            {% else %}
+              {{ line.remaining | money }} left · projected {{ line.projected | money_short }}
+            {% endif %}
+          </p>
+          {% else %}
+          <div class="pacebar pacebar--untracked">
+            <div class="pacebar__fill" style="--fill: {{ (line.share * 100) | clamp }}%; --hue: {{ line.color }};"></div>
+          </div>
+          <p class="pacerow__read muted">
+            No limit set · {{ '%.0f' % (line.share * 100) }}% of this month
+            <a href="/budgets?month={{ window.slug }}">Set one</a>
+          </p>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty">
+        <p>Nothing recorded for {{ window.label }}.</p>
+        <p class="muted">Add your first expense using the form on the right.</p>
+      </div>
+    {% endif %}
+  </section>
+
+  <div class="stack">
+
+    {# ── Quick add ───────────────────────────────────────────────────── #}
+    <section class="panel">
+      <header class="panel__head"><h2>Add an expense</h2></header>
+      <form class="quickadd" method="post" action="/expenses">
+        <input type="hidden" name="redirect_to" value="/?month={{ window.slug }}">
+        <div class="field field--amount">
+          <label for="qa-amount">Amount</label>
+          <div class="inputgroup">
+            <span class="inputgroup__prefix">{{ currency }}</span>
+            <input id="qa-amount" name="amount" inputmode="decimal" placeholder="0.00" required autofocus>
+          </div>
+        </div>
+        <div class="field">
+          <label for="qa-category">Category</label>
+          <select id="qa-category" name="category_id" required>
+            {% for category in categories %}
+              <option value="{{ category.id }}">{{ category.icon }} {{ category.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="qa-date">Date</label>
+          <input id="qa-date" type="date" name="spent_on" value="{{ today }}" required>
+        </div>
+        <div class="field">
+          <label for="qa-note">Note <span class="muted">optional</span></label>
+          <input id="qa-note" name="note" maxlength="200" placeholder="What was it for?">
+        </div>
+        <button class="btn btn--primary" type="submit">Record expense</button>
+      </form>
+    </section>
+
+    {# ── Warnings and recommendations ────────────────────────────────── #}
+    <section class="panel">
+      <header class="panel__head"><h2>What to watch</h2></header>
+      <ul class="insights">
+        {% for insight in insights %}
+        <li class="insight insight--{{ insight.level }}">
+          <span class="insight__flag" aria-hidden="true"></span>
+          <div>
+            <p class="insight__title">{{ insight.title }}</p>
+            <p class="insight__detail">{{ insight.detail }}</p>
+          </div>
+        </li>
+        {% else %}
+        <li class="insight insight--tip">
+          <span class="insight__flag" aria-hidden="true"></span>
+          <div>
+            <p class="insight__title">Nothing to flag yet</p>
+            <p class="insight__detail">Record a few expenses and warnings will appear here.</p>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+
+  </div>
+</div>
+
+{# ── Charts ───────────────────────────────────────────────────────────── #}
+<div class="chartgrid">
+  <section class="panel">
+    <header class="panel__head"><h2>Category mix</h2></header>
+    <div class="chartbox"><canvas id="chart-mix"></canvas></div>
+  </section>
+
+  <section class="panel">
+    <header class="panel__head"><h2>Spending through the month</h2></header>
+    <div class="chartbox"><canvas id="chart-burn"></canvas></div>
+  </section>
+
+  <section class="panel">
+    <header class="panel__head"><h2>Last six months</h2></header>
+    <div class="chartbox"><canvas id="chart-history"></canvas></div>
+  </section>
+</div>
+
+{# ── Recent activity ──────────────────────────────────────────────────── #}
+<section class="panel">
+  <header class="panel__head">
+    <h2>Latest entries</h2>
+    <a class="panel__link" href="/expenses?month={{ window.slug }}">See all expenses</a>
+  </header>
+  {% if recent %}
+  <table class="ledger">
+    <thead>
+      <tr><th>Date</th><th>Category</th><th>Note</th><th class="right">Amount</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for expense in recent %}
+      <tr>
+        <td class="figure muted">{{ expense.spent_on | day }}</td>
+        <td><span class="swatch" style="background: {{ expense.category.color }}"></span>{{ expense.category.name }}</td>
+        <td class="muted">{{ expense.note or '—' }}</td>
+        <td class="right figure">{{ expense.amount | money }}</td>
+        <td class="right">
+          <form method="post" action="/expenses/{{ expense.id }}/delete">
+            <input type="hidden" name="redirect_to" value="/?month={{ window.slug }}">
+            <button class="btn btn--ghost btn--tiny" type="submit" aria-label="Delete this expense">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty"><p>No expenses recorded yet.</p></div>
+  {% endif %}
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>window.LEDGER_MONTH = "{{ window.slug }}";</script>
+<script src="/static/js/charts.js"></script>
+{% endblock %}
