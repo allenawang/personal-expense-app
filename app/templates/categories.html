@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Categories — {{ app_name }}{% endblock %}
+
+{% block content %}
+
+<section class="panel">
+  <header class="panel__head">
+    <h2>Add a category</h2>
+    <p class="panel__note">Name it however you think about the money.</p>
+  </header>
+  <form class="rowform" method="post" action="/categories">
+    <input type="hidden" name="redirect_to" value="/categories?month={{ window.slug }}">
+    <div class="field field--grow">
+      <label for="cat-name">Name</label>
+      <input id="cat-name" name="name" maxlength="60" placeholder="Coffee" required>
+    </div>
+    <div class="field field--narrow">
+      <label for="cat-icon">Icon</label>
+      <input id="cat-icon" name="icon" maxlength="8" placeholder="☕">
+    </div>
+    <div class="field field--narrow">
+      <label for="cat-color">Color</label>
+      <input id="cat-color" type="color" name="color" value="#3E6EA8">
+    </div>
+    <button class="btn btn--primary" type="submit">Add category</button>
+  </form>
+</section>
+
+<section class="panel">
+  <header class="panel__head">
+    <h2>Your categories</h2>
+    <p class="panel__note">
+      Order here sets the order everywhere. Categories with recorded expenses are
+      archived rather than deleted, so past months keep their totals.
+    </p>
+  </header>
+
+  <ul class="catlist">
+    {% for category in categories %}
+    <li class="catrow {{ 'is-archived' if category.is_archived }}">
+      <form class="catrow__edit" method="post" action="/categories/{{ category.id }}">
+        <input type="hidden" name="redirect_to" value="/categories?month={{ window.slug }}">
+        <input class="catrow__color" type="color" name="color" value="{{ category.color }}"
+               aria-label="Color for {{ category.name }}">
+        <input class="catrow__icon" name="icon" value="{{ category.icon }}" maxlength="8"
+               aria-label="Icon for {{ category.name }}" placeholder="—">
+        <input class="catrow__name" name="name" value="{{ category.name }}" maxlength="60"
+               aria-label="Name of {{ category.name }}">
+        <button class="btn btn--ghost btn--tiny" type="submit">Save</button>
+      </form>
+
+      <span class="catrow__meta muted">
+        {% if category.is_archived %}Archived · {% endif %}
+        {{ usage.get(category.id, 0) }} {{ 'entry' if usage.get(category.id, 0) == 1 else 'entries' }}
+      </span>
+
+      <div class="catrow__actions">
+        <form method="post" action="/categories/{{ category.id }}/move">
+          <input type="hidden" name="redirect_to" value="/categories?month={{ window.slug }}">
+          <input type="hidden" name="direction" value="up">
+          <button class="btn btn--icon" type="submit" aria-label="Move {{ category.name }} up">↑</button>
+        </form>
+        <form method="post" action="/categories/{{ category.id }}/move">
+          <input type="hidden" name="redirect_to" value="/categories?month={{ window.slug }}">
+          <input type="hidden" name="direction" value="down">
+          <button class="btn btn--icon" type="submit" aria-label="Move {{ category.name }} down">↓</button>
+        </form>
+
+        <form method="post" action="/categories/{{ category.id }}/archive">
+          <input type="hidden" name="redirect_to" value="/categories?month={{ window.slug }}">
+          <button class="btn btn--ghost btn--tiny" type="submit">
+            {{ 'Restore' if category.is_archived else 'Archive' }}
+          </button>
+        </form>
+
+        {% if usage.get(category.id, 0) == 0 %}
+        <form method="post" action="/categories/{{ category.id }}/delete"
+              onsubmit="return confirm('Delete {{ category.name }}? It has no expenses, so nothing is lost.')">
+          <input type="hidden" name="redirect_to" value="/categories?month={{ window.slug }}">
+          <button class="btn btn--ghost btn--tiny btn--danger" type="submit">Delete</button>
+        </form>
+        {% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+{% endblock %}

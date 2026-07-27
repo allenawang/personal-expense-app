@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Budgets — {{ app_name }}{% endblock %}
+
+{% block content %}
+
+<section class="panel">
+  <header class="panel__head">
+    <h2>Monthly goals</h2>
+    <p class="panel__note">
+      Limits repeat every month. Leave a field blank to stop tracking that category.
+    </p>
+  </header>
+
+  <form method="post" action="/budgets/bulk">
+    <input type="hidden" name="redirect_to" value="/budgets?month={{ window.slug }}">
+
+    <div class="budgetrow budgetrow--overall">
+      <div class="budgetrow__label">
+        <strong>Everything</strong>
+        <span class="muted">Your ceiling for the whole month</span>
+      </div>
+      <div class="inputgroup inputgroup--tight">
+        <span class="inputgroup__prefix">{{ currency }}</span>
+        <input name="limit_overall" inputmode="decimal" placeholder="No limit"
+               value="{{ '%.2f' % overall_budget.monthly_limit if overall_budget else '' }}">
+      </div>
+      <div class="budgetrow__actual figure">
+        {{ summary.total_spent | money }} spent
+      </div>
+    </div>
+
+    <ul class="budgetlist">
+      {% for line in summary.lines %}
+      <li class="budgetrow">
+        <div class="budgetrow__label">
+          <span class="swatch" style="background: {{ line.color }}"></span>
+          {% if line.icon %}<span class="pacerow__icon">{{ line.icon }}</span>{% endif %}
+          <strong>{{ line.name }}</strong>
+        </div>
+        <div class="inputgroup inputgroup--tight">
+          <span class="inputgroup__prefix">{{ currency }}</span>
+          <input name="limit_{{ line.category_id }}" inputmode="decimal" placeholder="No limit"
+                 value="{{ '%.2f' % line.limit if line.limit else '' }}">
+        </div>
+        <div class="budgetrow__actual figure {{ 'is-over' if line.status == 'over' }}">
+          {{ line.spent | money }} spent
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+
+    <div class="formfoot">
+      <button class="btn btn--primary" type="submit">Save budgets</button>
+      <p class="muted">
+        Categories are managed on the <a href="/categories?month={{ window.slug }}">Categories</a> page.
+      </p>
+    </div>
+  </form>
+</section>
+
+{% if summary.overall_limit %}
+<section class="panel">
+  <header class="panel__head">
+    <h2>How the limits add up</h2>
+  </header>
+  {% set allocated = summary.tracked_lines | sum(attribute='limit') %}
+  <div class="allocation">
+    <p class="allocation__line">
+      <span>Category limits</span>
+      <span class="figure">{{ allocated | money }}</span>
+    </p>
+    <p class="allocation__line">
+      <span>Overall limit</span>
+      <span class="figure">{{ summary.overall_limit | money }}</span>
+    </p>
+    <p class="allocation__line allocation__line--result">
+      {% if allocated > summary.overall_limit %}
+        <span>Over-allocated by</span>
+        <span class="figure is-over">{{ (allocated - summary.overall_limit) | money }}</span>
+      {% else %}
+        <span>Unallocated</span>
+        <span class="figure">{{ (summary.overall_limit - allocated) | money }}</span>
+      {% endif %}
+    </p>
+  </div>
+  <p class="panel__note">
+    {% if allocated > summary.overall_limit %}
+      Your category limits total more than your overall limit. Hitting every category
+      limit would put you over the month.
+    {% else %}
+      Room left to assign to categories, or to leave as slack.
+    {% endif %}
+  </p>
+</section>
+{% endif %}
+
+{% endblock %}

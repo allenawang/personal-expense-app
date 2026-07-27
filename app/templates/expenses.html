@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Expenses — {{ app_name }}{% endblock %}
+
+{% block content %}
+
+<section class="panel">
+  <header class="panel__head">
+    <h2>Add an expense</h2>
+    <p class="panel__note">Entries can be dated into any month.</p>
+  </header>
+  <form class="rowform" method="post" action="/expenses">
+    <input type="hidden" name="redirect_to" value="/expenses?month={{ window.slug }}">
+    <div class="field field--amount">
+      <label for="ex-amount">Amount</label>
+      <div class="inputgroup">
+        <span class="inputgroup__prefix">{{ currency }}</span>
+        <input id="ex-amount" name="amount" inputmode="decimal" placeholder="0.00" required>
+      </div>
+    </div>
+    <div class="field">
+      <label for="ex-category">Category</label>
+      <select id="ex-category" name="category_id" required>
+        {% for category in categories %}
+          <option value="{{ category.id }}">{{ category.icon }} {{ category.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="ex-date">Date</label>
+      <input id="ex-date" type="date" name="spent_on" value="{{ today }}" required>
+    </div>
+    <div class="field field--grow">
+      <label for="ex-note">Note <span class="muted">optional</span></label>
+      <input id="ex-note" name="note" maxlength="200" placeholder="What was it for?">
+    </div>
+    <button class="btn btn--primary" type="submit">Record expense</button>
+  </form>
+</section>
+
+<section class="panel">
+  <header class="panel__head">
+    <h2>{{ window.label }}</h2>
+    <p class="panel__note">{{ expenses | length }} entries</p>
+  </header>
+
+  <div class="filterbar" role="group" aria-label="Filter by category">
+    <a class="pill {{ 'is-active' if not active_filter }}" href="/expenses?month={{ window.slug }}">All</a>
+    {% for category in categories %}
+      <a class="pill {{ 'is-active' if active_filter == category.id }}"
+         href="/expenses?month={{ window.slug }}&category_id={{ category.id }}">
+        <span class="swatch" style="background: {{ category.color }}"></span>{{ category.name }}
+      </a>
+    {% endfor %}
+  </div>
+
+  {% if expenses %}
+  <table class="ledger">
+    <thead>
+      <tr><th>Date</th><th>Category</th><th>Note</th><th class="right">Amount</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for expense in expenses %}
+      <tr>
+        <td class="figure muted">{{ expense.spent_on | day }}</td>
+        <td><span class="swatch" style="background: {{ expense.category.color }}"></span>{{ expense.category.name }}</td>
+        <td class="muted">{{ expense.note or '—' }}</td>
+        <td class="right figure">{{ expense.amount | money }}</td>
+        <td class="right">
+          <form method="post" action="/expenses/{{ expense.id }}/delete">
+            <input type="hidden" name="redirect_to" value="/expenses?month={{ window.slug }}{% if active_filter %}&category_id={{ active_filter }}{% endif %}">
+            <button class="btn btn--ghost btn--tiny" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3" class="figure">Total</td>
+        <td class="right figure strong">{{ expenses | sum(attribute='amount') | money }}</td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+  {% else %}
+  <div class="empty">
+    <p>No expenses in {{ window.label }}{% if active_filter %} for this category{% endif %}.</p>
+    <p class="muted">Use the form above to add the first one.</p>
+  </div>
+  {% endif %}
+</section>
+
+{% endblock %}

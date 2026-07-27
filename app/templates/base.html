@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2324406B'/><rect x='7' y='19' width='18' height='3' fill='white'/><rect x='7' y='13' width='11' height='3' fill='white' opacity='.65'/><rect x='7' y='7' width='6' height='3' fill='white' opacity='.4'/></svg>">
+</head>
+<body>
+
+<header class="masthead">
+  <a class="wordmark" href="/">
+    <span class="wordmark__mark" aria-hidden="true"></span>
+    {{ app_name }}
+  </a>
+
+  {% if window is defined %}
+  <div class="monthnav" role="group" aria-label="Choose month">
+    <a class="monthnav__step" href="{{ request.url.path }}?month={{ prev_slug }}" aria-label="Previous month">&larr;</a>
+    <span class="monthnav__label">
+      {{ window.label }}
+      {% if window.is_current %}<em>day {{ window.days_elapsed }} of {{ window.days_in_month }}</em>{% endif %}
+    </span>
+    <a class="monthnav__step" href="{{ request.url.path }}?month={{ next_slug }}" aria-label="Next month">&rarr;</a>
+  </div>
+  {% endif %}
+</header>
+
+<nav class="tabs" aria-label="Sections">
+  {% set slug = window.slug if window is defined else '' %}
+  <a href="/?month={{ slug }}"           class="tab {{ 'is-active' if page == 'dashboard' }}">Overview</a>
+  <a href="/expenses?month={{ slug }}"   class="tab {{ 'is-active' if page == 'expenses' }}">Expenses</a>
+  <a href="/budgets?month={{ slug }}"    class="tab {{ 'is-active' if page == 'budgets' }}">Budgets</a>
+  <a href="/categories?month={{ slug }}" class="tab {{ 'is-active' if page == 'categories' }}">Categories</a>
+</nav>
+
+<main class="shell">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="footpost">
+  <span>{{ app_name }}</span>
+  <span>Data stays in your own database.</span>
+</footer>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

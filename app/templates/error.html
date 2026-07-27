@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ status }} — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="panel panel--centered">
+  <p class="eyebrow">{{ status }}</p>
+  <h2 class="errortitle">{{ detail }}</h2>
+  <p class="muted">Go back and adjust the entry, or return to the overview.</p>
+  <p><a class="btn btn--primary" href="/">Back to overview</a></p>
+</section>
+{% endblock %}

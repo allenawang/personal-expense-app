@@ -80,6 +80,33 @@ run, along with six starter categories.
 pytest -q                          # run the tests
 ```
 
+## Deploy to Render
+
+The fastest route to a live URL. The repo includes `render.yaml`, which creates
+the web service and a free Postgres database together.
+
+1. Sign in at **render.com** with your GitHub account
+2. **New → Blueprint**, select `personal-expense-app`, **Apply**
+
+Render reads `render.yaml`, provisions Postgres, wires `DATABASE_URL` into the
+web service, and builds. First deploy takes a few minutes.
+
+To set it up by hand instead — **New → Web Service**, connect the repo, then:
+
+| Setting | Value |
+| ------- | ----- |
+| Runtime | Python 3 |
+| Build command | `pip install -r requirements.txt` |
+| Start command | `gunicorn app.main:app -k uvicorn.workers.UvicornWorker -b 0.0.0.0:$PORT` |
+| Instance type | Free |
+
+Add a free Postgres instance separately and set `DATABASE_URL` to its internal
+connection string. Render hands out `postgres://` URLs; the app converts the
+scheme automatically, so paste it unchanged.
+
+Free instances sleep after 15 minutes idle, so the first request after a break
+takes ~30 seconds to wake.
+
 ## Deploy to Azure
 
 Free-tier friendly: the F1 App Service plan costs nothing, and SQLite on the
